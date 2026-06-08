@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Rebar QA/QC Auditor v2.0</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0F17;--surf:#131B27;--panel:#192232;--border:#243045;
+  --accent:#F5A623;--a2:#2D8CF0;--ok:#3DAA5C;--err:#E53935;--warn:#F57C00;--muted:#4E6A8A;
+  --text:#D4E2F0;--r:10px;--th:50px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;}
+
+header{background:var(--surf);border-bottom:1px solid var(--border);padding:10px 20px;
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+.logo{width:36px;height:36px;background:var(--accent);border-radius:8px;display:grid;
+  place-items:center;font-weight:900;font-size:16px;color:#000;flex-shrink:0;}
+.htxt h1{font-size:16px;font-weight:800;color:#fff;}
+.htxt p{font-size:10px;color:var(--muted);margin-top:2px;}
+.status-pills{margin-left:auto;display:flex;gap:7px;align-items:center;}
+.pill{display:flex;align-items:center;gap:5px;background:var(--panel);
+  border:1px solid var(--border);border-radius:14px;padding:4px 10px;
+  font-size:10px;font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+.dot.ok{background:var(--ok);box-shadow:0 0 5px var(--ok);}
+.dot.err{background:var(--err);}
+.dot.warn{background:var(--warn);}
+
+.tabbar{display:flex;background:var(--surf);border-bottom:1px solid var(--border);
+  padding:0 16px;overflow-x:auto;gap:1px;position:sticky;top:58px;z-index:99;}
+.tbtn{height:var(--th);padding:0 14px;background:transparent;border:none;
+  border-bottom:3px solid transparent;color:var(--muted);font-family:'Barlow',sans-serif;
+  font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;
+  white-space:nowrap;transition:color .15s,border-color .15s;}
+.tbtn:hover{color:var(--text);}
+.tbtn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.badge{background:var(--ok);color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;font-weight:700;}
+.badge.e{background:var(--err);}
+
+main{height:calc(100vh - 58px - var(--th));display:flex;overflow:hidden;}
+.panel{display:none;width:100%;height:100%;overflow-y:auto;padding:16px 20px;flex-direction:column;gap:12px;}
+.panel.active{display:flex;}
+
+.card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:15px 17px;}
+.ctitle{font-weight:800;font-size:14px;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+
+/* Upload zones */
+.upzone{border:2px dashed var(--border);border-radius:var(--r);padding:20px;text-align:center;
+  cursor:pointer;transition:border-color .2s,background .2s;position:relative;}
+.upzone:hover,.upzone.drag{border-color:var(--accent);background:rgba(245,166,35,.04);}
+.upzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upzone .icon{font-size:28px;margin-bottom:5px;}
+.upzone h3{font-weight:700;font-size:13px;margin-bottom:2px;}
+.upzone p{font-size:10px;color:var(--muted);}
+.fchip{display:flex;align-items:center;gap:8px;background:var(--panel);
+  border:1px solid var(--ok);border-radius:6px;padding:6px 10px;font-size:11px;
+  color:var(--ok);font-family:'IBM Plex Mono',monospace;margin-top:6px;}
+.fchip .rm{margin-left:auto;background:rgba(229,57,53,.2);color:var(--err);
+  border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:10px;}
+
+/* Mode cards */
+.mode-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.checks-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px;}
+.ctile{background:var(--panel);border:2px solid var(--border);border-radius:8px;
+  padding:9px 11px;cursor:pointer;transition:border-color .15s,background .15s;
+  display:flex;align-items:flex-start;gap:8px;}
+.ctile:hover{border-color:var(--muted);}
+.ctile.on{border-color:var(--ok);background:rgba(61,170,92,.06);}
+.ctile input{display:none;}
+.ctile-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.ctile-body .ctile-name{font-weight:700;font-size:11px;line-height:1.3;}
+.ctile-body .ctile-desc{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.ctile-check{margin-left:auto;font-size:14px;flex-shrink:0;}
+.mcard{background:var(--panel);border:2px solid var(--border);border-radius:8px;
+  padding:11px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+.mcard:hover{border-color:var(--muted);}
+.mcard.active{border-color:var(--accent);background:rgba(245,166,35,.06);}
+.mcard .icon{font-size:18px;margin-bottom:3px;}
+.mcard .name{font-weight:800;font-size:12px;}
+.mcard .time{font-size:9px;color:var(--muted);margin-top:3px;}
+
+/* Forms */
+label{display:block;font-size:10px;font-weight:700;color:var(--muted);
+  margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;}
+input[type=text],select{width:100%;background:var(--panel);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;
+  padding:7px 10px;outline:none;transition:border-color .2s;}
+input:focus,select:focus{border-color:var(--a2);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.fg{display:flex;flex-direction:column;gap:3px;margin-bottom:8px;}
+.hint{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* Buttons */
+.runbtn{width:100%;height:48px;background:var(--accent);color:#000;border:none;
+  border-radius:var(--r);font-weight:900;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:9px;transition:opacity .15s;}
+.runbtn:hover{opacity:.88;}.runbtn:disabled{opacity:.35;cursor:not-allowed;}
+.cancelbtn{width:100%;height:36px;background:rgba(229,57,53,.12);border:1px solid var(--err);
+  color:var(--err);border-radius:var(--r);font-weight:700;font-size:13px;cursor:pointer;
+  display:none;margin-top:6px;transition:background .15s;}
+.cancelbtn:hover{background:rgba(229,57,53,.22);}
+.secbtn{background:var(--panel);border:1px solid var(--border);color:var(--text);
+  padding:7px 13px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;transition:border-color .2s;}
+.secbtn:hover{border-color:var(--accent);}
+
+/* Alerts */
+.alert{padding:8px 12px;border-radius:7px;font-size:11px;margin-bottom:8px;line-height:1.5;}
+.aok  {background:rgba(61,170,92,.1); border:1px solid rgba(61,170,92,.3); color:#7EC896;}
+.awarn{background:rgba(245,124,0,.1); border:1px solid rgba(245,124,0,.3); color:#FFB74D;}
+.aerr {background:rgba(229,57,53,.1); border:1px solid rgba(229,57,53,.3); color:#EF9A9A;}
+.ainfo{background:rgba(45,140,240,.1);border:1px solid rgba(45,140,240,.25);color:#90CAF9;}
+
+/* Progress */
+.progwrap{display:none;background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px;}
+.progwrap.show{display:block;}
+.prog-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.prog-title{font-weight:700;font-size:12px;}
+.prog-pct{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);font-weight:600;}
+.pbwrap{background:var(--bg);border-radius:4px;height:6px;overflow:hidden;margin:5px 0;}
+.pb{height:100%;border-radius:4px;width:0%;transition:width .5s ease;background:linear-gradient(90deg,var(--a2),var(--accent));}
+.pb.done{background:var(--ok);}
+.plog{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);
+  max-height:120px;overflow-y:auto;margin-top:5px;line-height:1.9;}
+.plog .lok{color:var(--ok);}.plog .lwarn{color:var(--warn);}.plog .lerr{color:var(--err);}
+
+/* Results */
+.gbanner{border-radius:var(--r);padding:13px 16px;display:flex;align-items:center;gap:13px;margin-bottom:12px;}
+.gbanner.PASS  {background:rgba(61,170,92,.1); border:1px solid rgba(61,170,92,.35);}
+.gbanner.FAIL  {background:rgba(229,57,53,.1); border:1px solid rgba(229,57,53,.35);}
+.gbanner.REVIEW{background:rgba(245,124,0,.1); border:1px solid rgba(245,124,0,.35);}
+.gletter{font-weight:900;font-size:44px;line-height:1;}
+.gbanner.PASS  .gletter{color:var(--ok);}
+.gbanner.FAIL  .gletter{color:var(--err);}
+.gbanner.REVIEW .gletter{color:var(--warn);}
+.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.sbox{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px;text-align:center;}
+.snum{font-weight:900;font-size:32px;line-height:1;}
+.snum.e{color:var(--err);}.snum.w{color:var(--warn);}.snum.ok{color:var(--ok);}
+.slbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:2px;}
+
+/* Drawing viewer */
+.dview{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px;margin-bottom:12px;}
+.dvhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.dvtitle{font-weight:700;font-size:13px;color:var(--accent);}
+.dvctrl{display:flex;gap:5px;}
+.vbtn{background:var(--border);border:none;color:var(--text);padding:4px 9px;
+  border-radius:5px;cursor:pointer;font-size:11px;font-weight:600;transition:background .15s;}
+.vbtn:hover,.vbtn.av{background:var(--accent);color:#000;}
+.dwrap{overflow:auto;background:#0A0E14;border-radius:6px;max-height:500px;
+  border:1px solid var(--border);position:relative;}
+.dwrap img{display:block;max-width:100%;height:auto;cursor:zoom-in;}
+.dwrap canvas{position:absolute;top:0;left:0;pointer-events:auto;cursor:crosshair;}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:10px;
+  color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.ldot{width:8px;height:8px;border-radius:50%;}
+
+/* Issue cards */
+.isec-hdr{display:flex;align-items:center;gap:7px;padding:7px 11px;
+  background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  cursor:pointer;font-weight:700;font-size:11px;user-select:none;margin:4px 0;}
+.isec-hdr:hover{border-color:var(--a2);}
+.isec-cnt{margin-left:auto;font-size:10px;font-family:'IBM Plex Mono',monospace;
+  padding:1px 6px;border-radius:7px;background:var(--bg);}
+.cnt-e{background:rgba(229,57,53,.2);color:var(--err);}
+.cnt-w{background:rgba(245,124,0,.2);color:var(--warn);}
+.cnt-ok{background:rgba(61,170,92,.2);color:var(--ok);}
+.icard{border-left:3px solid var(--border);padding:7px 12px;margin:2px 0;
+  font-size:11px;line-height:1.7;border-radius:0 5px 5px 0;background:var(--surf);cursor:pointer;}
+.icard.error{border-left-color:var(--err);}
+.icard.warning{border-left-color:var(--warn);}
+.icard.ok-card{border-left-color:var(--ok);color:var(--ok);font-style:italic;}
+.sevtag{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;
+  border-radius:3px;text-transform:uppercase;margin-right:4px;}
+.sevtag.error{background:rgba(229,57,53,.2);color:var(--err);}
+.sevtag.warning{background:rgba(245,124,0,.2);color:var(--warn);}
+.num-badge{float:right;font-size:9px;font-family:'IBM Plex Mono',monospace;color:var(--accent);
+  background:rgba(245,166,35,.12);padding:1px 5px;border-radius:3px;}
+.fix-line{font-size:10px;color:var(--ok);margin-top:2px;}
+.loc-line{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+/* BBS table */
+.bbs-wrap{overflow-x:auto;margin-top:6px;}
+table.bbt{width:100%;border-collapse:collapse;font-size:11px;font-family:'IBM Plex Mono',monospace;}
+table.bbt th{background:var(--panel);padding:6px 7px;text-align:left;border:1px solid var(--border);
+  font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);white-space:nowrap;}
+table.bbt td{padding:5px 7px;border:1px solid var(--border);}
+table.bbt tr:hover td{background:rgba(255,255,255,.02);}
+.tok{color:var(--ok);font-weight:700;}.tfail{color:var(--err);font-weight:700;}
+
+/* Spin */
+.spin{width:16px;height:16px;border:3px solid rgba(0,0,0,.2);border-top-color:#000;
+  border-radius:50%;animation:sp .7s linear infinite;display:none;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.sep{border-top:1px solid var(--border);margin:8px 0;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">RE</div>
+  <div class="htxt">
+    <h1>REBAR QA/QC AUDITOR v2.0</h1>
+    <p>BBS · Reference Plan · Cover/Dims · Labels · Ollama + Claude API</p>
+  </div>
+  <div class="status-pills">
+    <div class="pill"><div class="dot" id="vdot"></div><span id="vtxt">Vision...</span></div>
+    <div class="pill"><div class="dot" id="tdot"></div><span id="ttxt">Text...</span></div>
+    <div class="pill"><div class="dot" id="bdot"></div><span id="btxt">Engine...</span></div>
+  </div>
+</header>
+
+<div class="tabbar">
+  <button class="tbtn active" onclick="sw('t-upload',this)">📁 Upload</button>
+  <button class="tbtn"        onclick="sw('t-rules',this)">⚙️ Audit Rules</button>
+  <button class="tbtn"        onclick="sw('t-results',this)" id="resTab">📊 Results <span class="badge e" id="resBadge" style="display:none"></span></button>
+</div>
+
+<main>
+
+<!-- ═══ UPLOAD TAB ═══ -->
+<div class="panel active" id="t-upload">
+
+
+  <!-- Quick API key setup — shown when no engine is ready -->
+  <div id="noEngineAlert" class="alert aerr" style="display:none">
+    <strong>⚠ No AI engine ready</strong> — Ollama is not running on this system.<br>
+    Enter an API key below to use a cloud AI engine instead (free options available):
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:8px;align-items:center">
+      <input type="text" id="quickApiKey" placeholder="Paste API key (sk-... or AIza...)"
+             style="font-family:'IBM Plex Mono',monospace;font-size:12px;">
+      <select id="quickEngineType" style="width:auto;padding:7px 8px">
+        <option value="openai">OpenAI (sk-...)</option>
+        <option value="gemini">Gemini (AIza...)</option>
+        <option value="claude">Claude (sk-ant-...)</option>
+      </select>
+      <button class="secbtn" onclick="applyQuickKey()" style="white-space:nowrap;border-color:var(--ok);color:var(--ok)">
+        ✓ Apply &amp; Enable
+      </button>
+    </div>
+    <p style="font-size:10px;margin-top:6px;color:var(--muted)">
+      Get free key: &nbsp;
+      <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--a2)">Gemini (free)</a> &nbsp;·&nbsp;
+      <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--a2)">OpenAI</a> &nbsp;·&nbsp;
+      <a href="https://console.anthropic.com" target="_blank" style="color:var(--a2)">Claude</a>
+    </p>
+  </div>
+
+  <!-- Speed mode -->
+  <div class="card">
+    <div class="ctitle">⚡ Audit Speed</div>
+    <div class="mode-grid">
+      <div class="mcard" id="mc-fast" onclick="selMode('fast')">
+        <div class="icon">⚡</div>
+        <div class="name" style="color:var(--ok)">FAST</div>
+        <div class="time">Text only · ~15 min</div>
+      </div>
+      <div class="mcard active" id="mc-smart" onclick="selMode('smart')">
+        <div class="icon">🔍</div>
+        <div class="name" style="color:var(--accent)">SMART ✓</div>
+        <div class="time">Text + 1 vision · ~30-60 min</div>
+      </div>
+      <div class="mcard" id="mc-deep" onclick="selMode('deep')">
+        <div class="icon">🔬</div>
+        <div class="name" style="color:var(--a2)">DEEP</div>
+        <div class="time">Full vision · 2-4 hrs</div>
+      </div>
+    </div>
+    <div id="modeHint" class="alert ainfo" style="font-size:10px;margin-top:8px">
+      <strong>SMART:</strong> PDF text + 1 vision tile. Auto-adds vision for scanned pages. Recommended for most drawings.
+    </div>
+  </div>
+
+  <!-- Shop drawing -->
+  <div class="card">
+    <div class="ctitle">📄 Shop Drawing <span style="font-size:10px;color:var(--err);font-weight:600">(required)</span></div>
+    <div class="upzone" id="shopZone">
+      <input type="file" id="shopFile" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" onchange="onShop()">
+      <div class="icon">📄</div>
+      <h3>Drop rebar shop drawing here</h3>
+      <p>PDF · PNG · JPG · TIFF</p>
+    </div>
+    <div id="shopChip" style="display:none" class="fchip">
+      <span>✓</span><span id="shopName" style="flex:1"></span>
+      <button class="rm" onclick="clearFile('shopFile','shopChip')">✕</button>
+    </div>
+  </div>
+
+  <!-- BBS -->
+  <div class="card">
+    <div class="ctitle">📋 BBS — Bar Bending Schedule <span style="font-size:10px;color:var(--muted);font-weight:400">(optional)</span></div>
+    <div class="alert aok" style="font-size:10px">Excel files parsed directly — no AI needed, no timeout. PDF/image BBS uses vision model.</div>
+    <div class="upzone">
+      <input type="file" id="bbsFile" accept=".xlsx,.xls,.xlsm,.csv,.pdf,.png,.jpg,.jpeg" onchange="onBbs()">
+      <div class="icon">📋</div>
+      <h3>Drop BBS here</h3>
+      <p>Excel (direct parse) · CSV · PDF · Image</p>
+    </div>
+    <div id="bbsChip" style="display:none" class="fchip">
+      <span>✓</span><span id="bbsName" style="flex:1"></span>
+      <button class="rm" onclick="clearFile('bbsFile','bbsChip')">✕</button>
+    </div>
+  </div>
+
+  <!-- Reference -->
+  <div class="card">
+    <div class="ctitle">🗂️ Reference / IFC Drawing <span style="font-size:10px;color:var(--ok);font-weight:400">(optional)</span></div>
+    <div class="alert ainfo" style="font-size:10px"><strong>Without reference:</strong> All BBS, cover, label and code checks still run fully.</div>
+    <div class="upzone">
+      <input type="file" id="refFile" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp" onchange="onRef()">
+      <div class="icon">🗂️</div>
+      <h3>Drop reference / IFC plan here</h3>
+      <p>PDF · PNG · JPG</p>
+    </div>
+    <div id="refChip" style="display:none" class="fchip">
+      <span>✓</span><span id="refName" style="flex:1"></span>
+      <button class="rm" onclick="clearFile('refFile','refChip')">✕</button>
+    </div>
+  </div>
+
+
+  <div class="card">
+    <div class="ctitle">✅ Checks to Run
+      <button class="secbtn" onclick="toggleAllChecks(true)" style="margin-left:auto;font-size:10px;padding:3px 8px">All On</button>
+      <button class="secbtn" onclick="toggleAllChecks(false)" style="margin-left:4px;font-size:10px;padding:3px 8px">All Off</button>
+    </div>
+    <p class="hint" style="margin-bottom:8px">Toggle individual checks. Bar Dia and Spacing require a reference drawing.</p>
+    <div class="checks-grid" id="checksGrid">
+      <div class="ctile on" id="ct_general_arrangements" onclick="togCheck('general_arrangements',this)">
+        <div class="ctile-icon">📐</div>
+        <div class="ctile-body">
+          <div class="ctile-name">General Arrangements</div>
+          <div class="ctile-desc">Cover callouts · Missing dims · Spelling · Math calculations</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+      <div class="ctile on" id="ct_label_multiplier" onclick="togCheck('label_multiplier',this)">
+        <div class="ctile-icon">✖️</div>
+        <div class="ctile-body">
+          <div class="ctile-name">Label Multiplier</div>
+          <div class="ctile-desc">EF/ES/EE notation count vs × multipliers in label</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+      <div class="ctile on" id="ct_bar_dia" onclick="togCheck('bar_dia',this)">
+        <div class="ctile-icon">⌀</div>
+        <div class="ctile-body">
+          <div class="ctile-name">Bar Diameter</div>
+          <div class="ctile-desc">vs reference drawing · needs reference uploaded</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+      <div class="ctile on" id="ct_spacing" onclick="togCheck('spacing',this)">
+        <div class="ctile-icon">↔️</div>
+        <div class="ctile-body">
+          <div class="ctile-name">Bar Spacing</div>
+          <div class="ctile-desc">vs reference drawing · needs reference uploaded</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+      <div class="ctile on" id="ct_bbs_check" onclick="togCheck('bbs_check',this)">
+        <div class="ctile-icon">📋</div>
+        <div class="ctile-body">
+          <div class="ctile-name">BBS Checking</div>
+          <div class="ctile-desc">Qty · Shape code · Transport limit · 25mm rounding</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+      <div class="ctile on" id="ct_bar_length" onclick="togCheck('bar_length',this)">
+        <div class="ctile-icon">📏</div>
+        <div class="ctile-body">
+          <div class="ctile-name">Bar Length</div>
+          <div class="ctile-desc">Scale per plan · concrete dim − 2×cover vs BBS length</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+      <div class="ctile on" id="ct_lap_qty" onclick="togCheck('lap_qty',this)">
+        <div class="ctile-icon">🔗</div>
+        <div class="ctile-body">
+          <div class="ctile-name">Lapping Bar Qty</div>
+          <div class="ctile-desc">Lapping bars must have matching quantities</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+      <div class="ctile on" id="ct_missing_bar" onclick="togCheck('missing_bar',this)">
+        <div class="ctile-icon">🔍</div>
+        <div class="ctile-body">
+          <div class="ctile-name">Missing / Extra Bars</div>
+          <div class="ctile-desc">Missing rebar in concrete · Bar at opening/void</div>
+        </div>
+        <div class="ctile-check">✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code standard -->
+  <div class="card">
+    <div class="ctitle">📐 Code Standard</div>
+    <div class="fg">
+      <label>Detailing Standard</label>
+      <select id="stdSel">
+        <option value="BS8666">BS8666 — British Standard (UK)</option>
+        <option value="ACI318">ACI 318 — American Concrete Institute</option>
+        <option value="IS456">IS 456 — Indian Standard</option>
+        <option value="EC2">Eurocode 2 — European</option>
+        <option value="AS3600">AS 3600 — Australian</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Run -->
+  <div class="card">
+    <div class="ctitle">▶ Run Audit</div>
+    <div id="preflight" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px"></div>
+    <button class="runbtn" id="runBtn" onclick="runAudit()" disabled>
+      <div class="spin" id="spin"></div>
+      <span id="runTxt">▶ START AUDIT</span>
+    </button>
+    <button class="cancelbtn" id="cancelBtn" onclick="cancelAudit()">⏹ Cancel Audit</button>
+    <p class="hint" style="text-align:center;margin-top:6px">
+      Reference is optional · Fast mode: ~15 min · Smart mode: ~30-60 min
+    </p>
+  </div>
+
+  <!-- Progress -->
+  <div class="progwrap" id="progWrap">
+    <div class="prog-hdr">
+      <div class="prog-title" id="progTitle">Initializing...</div>
+      <div class="prog-pct" id="progPct">0%</div>
+    </div>
+    <div class="pbwrap"><div class="pb" id="progBar"></div></div>
+    <div class="plog" id="progLog"></div>
+  </div>
+
+</div>
+
+<!-- ═══ AUDIT RULES TAB ═══ -->
+<div class="panel" id="t-rules">
+  <div class="alert ainfo">Rules override AI inference. Leave blank = AI uses code defaults.</div>
+
+  <div class="card">
+    <div class="ctitle">🛡️ Cover Requirements</div>
+    <div class="g3">
+      <div class="fg"><label>Beams (mm)</label><input type="text" id="r_cover_beam" placeholder="e.g. 35"></div>
+      <div class="fg"><label>Slabs (mm)</label><input type="text" id="r_cover_slab" placeholder="e.g. 25"></div>
+      <div class="fg"><label>Columns (mm)</label><input type="text" id="r_cover_col" placeholder="e.g. 40"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">📏 Bar Diameter & Spacing</div>
+    <div class="g2">
+      <div class="fg"><label>Permitted Bar Sizes</label><input type="text" id="r_bar_sizes" placeholder="e.g. T10, T12, T16, T20, T25"></div>
+      <div class="fg"><label>Max Link Spacing (mm)</label><input type="text" id="r_max_link_spacing" placeholder="e.g. 200"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">🔧 Crank Bar Values — Per Diameter</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px" id="crankTabs">
+      <button class="vbtn av" onclick="swCrank('T10',this)">T10</button>
+      <button class="vbtn" onclick="swCrank('T12',this)">T12</button>
+      <button class="vbtn" onclick="swCrank('T16',this)">T16</button>
+      <button class="vbtn" onclick="swCrank('T20',this)">T20</button>
+      <button class="vbtn" onclick="swCrank('T25',this)">T25</button>
+      <button class="vbtn" onclick="swCrank('T32',this)">T32</button>
+    </div>
+    <div id="crankPanels"></div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">🌐 Custom Notes for AI</div>
+    <div class="fg">
+      <input type="text" id="r_custom" placeholder="Any project-specific requirements...">
+    </div>
+  </div>
+
+  <div class="card" style="background:rgba(45,140,240,.04);border-color:rgba(45,140,240,.2)">
+    <div class="ctitle">🤖 AI Engine Selection</div>
+    <div id="engineStatus" class="alert ainfo" style="font-size:10px;margin-bottom:10px">Checking engine status...</div>
+
+    <!-- 4 engine tiles -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
+      <div class="mcard active" id="eng-ollama" onclick="selEngine('ollama')" title="Free, offline, slower on CPU">
+        <div class="icon">🦙</div>
+        <div class="name" style="color:var(--ok)">OLLAMA</div>
+        <div class="time">Free · Offline</div>
+      </div>
+      <div class="mcard" id="eng-openai" onclick="selEngine('openai')" title="GPT-4o — fast, excellent vision">
+        <div class="icon">🤖</div>
+        <div class="name" style="color:var(--accent)">OPENAI</div>
+        <div class="time">GPT-4o · Fast</div>
+      </div>
+      <div class="mcard" id="eng-gemini" onclick="selEngine('gemini')" title="Gemini 2.5 Flash — fast, good vision">
+        <div class="icon">✨</div>
+        <div class="name" style="color:#4FC3F7">GEMINI 2.5</div>
+        <div class="time">Flash · Very fast</div>
+      </div>
+      <div class="mcard" id="eng-claude" onclick="selEngine('claude')" title="Claude claude-opus-4-5 — most accurate">
+        <div class="icon">⚡</div>
+        <div class="name" style="color:var(--a2)">CLAUDE</div>
+        <div class="time">Opus · Most accurate</div>
+      </div>
+    </div>
+
+    <!-- Key input (hidden for Ollama) -->
+    <div id="keySection" style="display:none">
+      <div class="fg">
+        <label id="keyLabel">API Key</label>
+        <input type="text" id="r_apikey" placeholder="" autocomplete="off"
+               style="font-family:'IBM Plex Mono',monospace;font-size:12px;">
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="runbtn" id="applyEngineBtn" onclick="applyEngine()"
+                style="height:36px;font-size:13px;flex:1">✓ Apply &amp; Switch</button>
+        <button class="secbtn" onclick="selEngine('ollama')">Use Ollama</button>
+      </div>
+      <p class="hint" style="margin-top:5px" id="keyHint"></p>
+    </div>
+
+    <div id="ollamaSetup" style="font-size:10px;color:var(--muted);margin-top:6px">
+      Ollama not running? Open CMD:<br>
+      <code style="background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--accent)">ollama serve</code>
+      &nbsp;·&nbsp;
+      <code style="background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--accent)">ollama pull llava:34b</code>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RESULTS TAB ═══ -->
+<div class="panel" id="t-results">
+  <div id="resPlaceholder" style="text-align:center;padding:50px 0;color:var(--muted)">
+    <div style="font-size:48px;margin-bottom:10px">📊</div>
+    <h2 style="font-size:16px;font-weight:700;margin-bottom:6px">No Results Yet</h2>
+    <p>Upload a shop drawing and click <strong>Start Audit</strong></p>
+  </div>
+  <div id="resContent" style="display:none"></div>
+</div>
+
+</main>
+
+<script>
+// ── STATE
+let engineOk=false, vModel='', tModel='', _jobId=null, bboxData=[], overlayOn=true;
+
+// ── ENGINE STATUS
+async function checkStatus(){
+  try{
+    const d=await(await fetch('/status')).json();
+    const isClaude=d.backend==='claude';
+    engineOk=d.ready;
+    vModel=d.vision_model||'';
+    tModel=d.text_model||'';
+
+    const vd=document.getElementById('vdot'),vt=document.getElementById('vtxt');
+    if(d.is_vision){vd.className='dot ok';vt.textContent=vModel||'Vision OK';}
+    else{vd.className='dot warn';vt.textContent='No vision model';}
+
+    const td=document.getElementById('tdot'),tt=document.getElementById('ttxt');
+    if(tModel){td.className='dot ok';tt.textContent=tModel;}
+    else{td.className='dot warn';tt.textContent='No text model';}
+
+    const bd=document.getElementById('bdot'),bt=document.getElementById('btxt');
+    if(d.ready){bd.className='dot ok';bt.textContent=isClaude?'Claude API':'Ollama ✓';}
+    else{bd.className='dot err';bt.textContent='No engine — enter API key';}
+    updateEngineStatus(d);
+    // Show quick-key banner if no engine ready
+    const noEngEl=document.getElementById('noEngineAlert');
+    if(noEngEl) noEngEl.style.display=(!d.ready)?'block':'none';
+  }catch{
+    ['vdot','tdot','bdot'].forEach(id=>document.getElementById(id).className='dot err');
+    document.getElementById('btxt').textContent='Cannot connect';
+    engineOk=false;
+  }
+  updateRunBtn();
+}
+
+// ── TABS
+function sw(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── FILE HANDLERS
+function onShop(){ const f=document.getElementById('shopFile').files[0]; if(!f)return;
+  document.getElementById('shopName').textContent=f.name;
+  document.getElementById('shopChip').style.display='flex'; updateRunBtn(); }
+
+function onBbs(){ const f=document.getElementById('bbsFile').files[0]; if(!f)return;
+  document.getElementById('bbsName').textContent=f.name;
+  document.getElementById('bbsChip').style.display='flex'; }
+
+function onRef(){ const f=document.getElementById('refFile').files[0]; if(!f)return;
+  document.getElementById('refName').textContent=f.name;
+  document.getElementById('refChip').style.display='flex'; }
+
+function clearFile(inp,chip){
+  document.getElementById(inp).value='';
+  document.getElementById(chip).style.display='none';
+  if(inp==='shopFile')updateRunBtn();
+}
+
+// ── MODE SELECTION
+const MODES={
+  fast:'<strong>FAST:</strong> PDF text extraction only — no vision model. ~15 min. Best for text-based PDFs.',
+  smart:'<strong>SMART:</strong> PDF text + 1 vision tile. Auto-adds vision for scanned pages. ~30-60 min. Recommended.',
+  deep:'<strong>DEEP:</strong> Full vision (all tiles). Best accuracy — 2-4 hrs on office CPU without GPU.'
+};
+function selMode(m){
+  ['fast','smart','deep'].forEach(x=>{
+    const c=document.getElementById('mc-'+x);
+    if(c)c.classList.toggle('active',x===m);
+  });
+  const h=document.getElementById('modeHint');
+  if(h)h.innerHTML=MODES[m]||'';
+}
+function getMode(){
+  return ['fast','smart','deep'].find(m=>(document.getElementById('mc-'+m)||{}).classList?.contains('active'))||'smart';
+}
+
+// ── CRANK UI
+const CDIAS=['T10','T12','T16','T20','T25','T32'];
+const CFIELDS=[
+  {id:'angle',label:'Crank Angle (°)',ph:'e.g. 45'},
+  {id:'len',  label:'Crank Length Formula',ph:'e.g. 1/6 × depth'},
+  {id:'setout',label:'Setout from Support (mm)',ph:'e.g. 450'},
+  {id:'min',  label:'Min Crank Dim',ph:'e.g. 2× bar dia'},
+];
+function buildCrankUI(){
+  const c=document.getElementById('crankPanels');
+  c.innerHTML=CDIAS.map((d,i)=>`
+    <div id="cp_${d}" style="display:${i===0?'block':'none'}">
+      <div class="g2">${CFIELDS.slice(0,2).map(f=>`
+        <div class="fg"><label>${f.label}</label>
+        <input type="text" id="cr_${d}_${f.id}" placeholder="${f.ph}"></div>`).join('')}
+      </div><div class="g2">${CFIELDS.slice(2).map(f=>`
+        <div class="fg"><label>${f.label}</label>
+        <input type="text" id="cr_${d}_${f.id}" placeholder="${f.ph}"></div>`).join('')}
+      </div></div>`).join('');
+}
+function swCrank(dia,btn){
+  CDIAS.forEach(d=>{
+    const p=document.getElementById('cp_'+d); if(p)p.style.display=d===dia?'block':'none';
+  });
+  document.querySelectorAll('#crankTabs .vbtn').forEach(b=>b.classList.remove('av'));
+  if(btn)btn.classList.add('av');
+}
+function collectCrank(fd){
+  CDIAS.forEach(d=>CFIELDS.forEach(f=>{
+    const inp=document.getElementById(`cr_${d}_${f.id}`);
+    if(inp&&inp.value.trim())fd.append(`crank_${d}_${f.id}`,inp.value.trim());
+  }));
+}
+
+
+// ── QUICK API KEY (shown when Ollama not running)
+async function applyQuickKey(){
+  const k=document.getElementById('quickApiKey').value.trim();
+  const e=document.getElementById('quickEngineType').value;
+  if(!k){alert('Paste an API key first');return;}
+  const btn=document.querySelector('#noEngineAlert button');
+  if(btn){btn.disabled=true;btn.textContent='Applying...';}
+  try{
+    const r=await fetch('/set-engine',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({engine:e,key:k})});
+    const d=await r.json();
+    if(d.ok){
+      engineOk=true;
+      document.getElementById('noEngineAlert').style.display='none';
+      document.getElementById('quickApiKey').value='';
+      // also update the Audit Rules engine tile
+      selEngine(e);
+      document.getElementById('r_apikey').value=k;
+      await checkStatus();
+      alert('✓ '+d.msg+'\nYou can now run audits!');
+    } else {
+      alert('Error: '+(d.error||'Unknown — check key format'));
+    }
+  }catch(ex){alert('Failed: '+ex.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent='✓ Apply & Enable';}}
+}
+
+// ── CHECK TOGGLES
+const ALL_CHECK_IDS=['general_arrangements','label_multiplier','bar_dia','spacing',
+                     'bbs_check','bar_length','lap_qty','missing_bar'];
+function togCheck(id, el){
+  el.classList.toggle('on');
+  el.querySelector('.ctile-check').textContent = el.classList.contains('on') ? '✓' : '○';
+}
+function toggleAllChecks(on){
+  ALL_CHECK_IDS.forEach(id=>{
+    const el=document.getElementById('ct_'+id);
+    if(!el)return;
+    if(on)el.classList.add('on'); else el.classList.remove('on');
+    el.querySelector('.ctile-check').textContent = on ? '✓' : '○';
+  });
+}
+function getEnabledChecks(){
+  return ALL_CHECK_IDS.filter(id=>document.getElementById('ct_'+id)?.classList.contains('on')).join(',');
+}
+
+// ── ENGINE SELECTION
+const ENG_META={
+  ollama: {label:'Ollama',ph:'',hint:''},
+  openai: {label:'OpenAI',ph:'sk-...',
+    hint:'Get key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--a2)">platform.openai.com</a>'},
+  gemini: {label:'Gemini',ph:'AIza...',
+    hint:'Get key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--a2)">aistudio.google.com</a>'},
+  claude: {label:'Claude',ph:'sk-ant-...',
+    hint:'Get key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--a2)">console.anthropic.com</a>'},
+};
+let _currentEngine='ollama';
+
+function selEngine(e){
+  _currentEngine=e;
+  ['ollama','openai','gemini','claude'].forEach(x=>
+    document.getElementById('eng-'+x)?.classList.toggle('active',x===e));
+  const needsKey=e!=='ollama';
+  document.getElementById('keySection').style.display=needsKey?'block':'none';
+  document.getElementById('ollamaSetup').style.display=needsKey?'none':'block';
+  if(needsKey){
+    const m=ENG_META[e];
+    document.getElementById('keyLabel').textContent=m.label+' API Key';
+    document.getElementById('r_apikey').placeholder=m.ph;
+    document.getElementById('keyHint').innerHTML=m.hint;
+    document.getElementById('applyEngineBtn').textContent=`✓ Apply ${m.label} Key`;
+  }
+}
+
+async function applyEngine(){
+  const k=document.getElementById('r_apikey').value.trim();
+  if(!k){alert('Enter an API key');return;}
+  const btn=document.getElementById('applyEngineBtn');
+  btn.disabled=true;btn.textContent='Applying...';
+  try{
+    const r=await fetch('/set-engine',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({engine:_currentEngine,key:k})});
+    const d=await r.json();
+    if(d.ok){
+      updateEngineStatus({backend:_currentEngine,engine:_currentEngine,ready:true,
+        vision_model:d.msg,text_model:''});
+      checkStatus();
+    }else alert('Error: '+(d.error||'Unknown'));
+  }catch(e){alert('Failed: '+e.message);}
+  finally{btn.disabled=false;btn.textContent=`✓ Apply ${ENG_META[_currentEngine]?.label} Key`;}
+}
+
+async function applyApiKey(){ return applyEngine(); } // legacy alias
+
+function updateEngineStatus(d){
+  const el=document.getElementById('engineStatus');
+  if(!el)return;
+  const eng=d.engine||d.backend||'ollama';
+  const ICONS={ollama:'🦙',openai:'🤖',gemini:'✨',claude:'⚡'};
+  const icon=ICONS[eng]||'🔧';
+  if(d.ready){
+    el.className='alert aok';
+    el.innerHTML=`<strong>${icon} ${eng.toUpperCase()} active</strong> — Vision: ${d.vision_model||'—'} · Text: ${d.text_model||d.vision_model||'—'}`;
+    ['ollama','openai','gemini','claude'].forEach(x=>
+      document.getElementById('eng-'+x)?.classList.toggle('active',x===eng));
+    _currentEngine=eng;
+    document.getElementById('keySection').style.display=eng==='ollama'?'none':'block';
+    document.getElementById('ollamaSetup').style.display=eng==='ollama'?'block':'none';
+  }else{
+    el.className='alert aerr';
+    el.innerHTML=`<strong>✗ No engine ready.</strong> Start Ollama (<code>ollama serve</code>) or select an API engine above.`;
+  }
+}
+
+// ── PREFLIGHT
+function updateRunBtn(){
+  const hasShop=!!document.getElementById('shopFile').files[0];
+  document.getElementById('runBtn').disabled=!hasShop||!engineOk;
+  // Extra hint on button if engine not ready
+  const rb=document.getElementById('runBtn');
+  if(!engineOk&&rb)rb.title='Enter API key above to enable';
+  const hasBbs=!!document.getElementById('bbsFile').files[0];
+  const hasRef=!!document.getElementById('refFile').files[0];
+  document.getElementById('preflight').innerHTML=[
+    `<span style="color:${hasShop?'var(--ok)':'var(--err)'}">${hasShop?'✓':'✗'} Shop drawing ${hasShop?'ready':'required'}</span>`,
+    `<span style="color:${engineOk?'var(--ok)':'var(--err)'}">${engineOk?'✓':'✗'} AI engine ${engineOk?'ready':'not ready'}</span>`,
+    `<span style="color:var(--ok)">✓ BBS ${hasBbs?'loaded':'optional'}</span>`,
+    `<span style="color:var(--ok)">✓ Reference ${hasRef?'loaded':'optional — run anytime without it'}</span>`,
+  ].join(' &nbsp;·&nbsp; ');
+}
+
+// ── PROGRESS LOG
+function addLog(msg){
+  const el=document.getElementById('progLog');
+  const d=document.createElement('div');
+  const m=msg.toLowerCase();
+  if(msg.startsWith('✓'))d.className='lok';
+  else if(msg.startsWith('⚠')||m.includes('error'))d.className='lwarn';
+  d.textContent='› '+msg;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+}
+
+// ── RUN AUDIT
+async function runAudit(){
+  const shopFile=document.getElementById('shopFile').files[0]; if(!shopFile)return;
+  const btn=document.getElementById('runBtn');
+  btn.disabled=true;
+  document.getElementById('spin').style.display='block';
+  document.getElementById('runTxt').textContent='Auditing...';
+  document.getElementById('cancelBtn').style.display='block';
+  document.getElementById('progWrap').classList.add('show');
+  document.getElementById('progBar').style.width='0%';
+  document.getElementById('progBar').className='pb';
+  document.getElementById('progLog').innerHTML='';
+  document.getElementById('progTitle').textContent='Starting audit...';
+
+  const fd=new FormData();
+  fd.append('drawing',shopFile);
+  const bbsFile=document.getElementById('bbsFile').files[0];
+  if(bbsFile)fd.append('bbs',bbsFile);
+  const refFile=document.getElementById('refFile').files[0];
+  if(refFile)fd.append('reference',refFile);
+  fd.append('standard',document.getElementById('stdSel').value);
+  fd.append('audit_mode',getMode());
+  fd.append('enabled_checks',getEnabledChecks());
+  // Send all audit rule fields
+  ['r_cover_beam','r_cover_slab','r_cover_col','r_bar_sizes','r_max_link_spacing'].forEach(id=>{
+    const el=document.getElementById(id); if(el&&el.value.trim()) fd.append(id, el.value.trim());
+  });
+  fd.append('custom_notes',document.getElementById('r_custom').value||'');
+  collectCrank(fd);
+
+  addLog(`Mode: ${getMode().toUpperCase()} | Shop: ${shopFile.name}${bbsFile?' | BBS: '+bbsFile.name:''}${refFile?' | Ref: '+refFile.name:''}`);
+
+  try{
+    const startR=await fetch('/audit/start',{method:'POST',body:fd});
+    if(!startR.ok)throw new Error((await startR.json()).error||'Start failed');
+    const {job_id}=await startR.json();
+    _jobId=job_id;
+    addLog(`Job: ${job_id}`);
+
+    await new Promise((res,rej)=>{
+      const es=new EventSource(`/audit/stream/${job_id}`);
+      es.onmessage=ev=>{
+        try{
+          const m=JSON.parse(ev.data);
+          if(m.type==='progress'){
+            const {msg,pct}=m.data;
+            if(pct!==undefined){
+              document.getElementById('progBar').style.width=pct+'%';
+              document.getElementById('progPct').textContent=pct+'%';
+              if(pct>=100)document.getElementById('progBar').className='pb done';
+            }
+            document.getElementById('progTitle').textContent=msg;
+            addLog(msg);
+          }else if(m.type==='done'){es.close();res();}
+          else if(m.type==='error'){es.close();rej(new Error(m.data));}
+        }catch{}
+      };
+      es.onerror=()=>{es.close();res();};
+    });
+
+    addLog('Fetching results...');
+    const resR=await fetch(`/audit/result/${job_id}`);
+    if(!resR.ok)throw new Error((await resR.json()).error||'Failed');
+    const data=await resR.json();
+    if(!data.success)throw new Error(data.error||'Audit failed');
+    showResults(data.results);
+
+  }catch(e){
+    addLog('ERROR: '+e.message);
+    document.getElementById('progTitle').textContent='✗ Audit failed: '+e.message;
+    document.getElementById('progBar').style.background='var(--err)';
+  }finally{
+    btn.disabled=false;
+    document.getElementById('spin').style.display='none';
+    document.getElementById('runTxt').textContent='▶ START AUDIT';
+    document.getElementById('cancelBtn').style.display='none';
+    updateRunBtn();
+  }
+}
+
+// ── CANCEL
+async function cancelAudit(){
+  if(!_jobId)return;
+  if(!confirm('Cancel the running audit?'))return;
+  try{
+    await fetch(`/audit/cancel/${_jobId}`,{method:'POST'});
+    document.getElementById('progTitle').textContent='⏹ Cancelled';
+    document.getElementById('progBar').style.background='var(--err)';
+  }catch(e){console.error(e);}
+}
+
+// ── SHOW RESULTS
+function showResults(r){
+  const s=r.summary||{};
+  const grade=s.grade||'REVIEW';
+  const gicon={PASS:'✅',FAIL:'❌',REVIEW:'⚠️'}[grade]||'⚠️';
+  const gmsg={
+    PASS:`Drawing PASSED — all checks clean`,
+    FAIL:`Drawing FAILED — ${s.critical} critical error(s)`,
+    REVIEW:`Requires Review — ${s.warnings} warning(s)`
+  }[grade];
+
+  // Collect bbox data
+  bboxData=(r.issues||[]).filter(it=>it.bbox&&(it.bbox.w||0)>0);
+
+  let html=`
+  <div class="gbanner ${grade}">
+    <div class="gletter">${grade}</div>
+    <div>
+      <h2 style="font-weight:700;font-size:16px">${gicon} ${gmsg}</h2>
+      <p style="font-size:10px;color:var(--muted);margin-top:2px">
+        ${r.shop_name||'—'} &nbsp;·&nbsp; Mode: ${(r.mode||'smart').toUpperCase()}
+        &nbsp;·&nbsp; Engine: ${r.backend||'ollama'}
+        ${r.has_ref?' &nbsp;·&nbsp; Ref: ✓':''}
+        ${r.has_bbs?' &nbsp;·&nbsp; BBS: ✓':''}
+      </p>
+    </div>
+  </div>
+  <div class="statrow">
+    <div class="sbox"><div class="snum e">${s.critical||0}</div><div class="slbl">Errors</div></div>
+    <div class="sbox"><div class="snum w">${s.warnings||0}</div><div class="slbl">Warnings</div></div>
+    <div class="sbox"><div class="snum ok">${s.total||0}</div><div class="slbl">Total Issues</div></div>
+  </div>`;
+
+  // Annotated drawing
+  if(r.annotated){
+    html+=`
+    <div class="dview">
+      <div class="dvhdr">
+        <div class="dvtitle">🖼️ Annotated Drawing — ${bboxData.length} markers</div>
+        <div class="dvctrl">
+          <button class="vbtn av" id="ovBtn" onclick="togOverlay()">📍 Markers</button>
+          <button class="vbtn" id="locBtn" onclick="reLocalize()" title="Re-locate markers with vision model">🎯 Re-Locate</button>
+          <button class="vbtn" onclick="dlImg()">⬇ Save</button>
+        </div>
+      </div>
+      <div class="dwrap" id="dwrap">
+        <img id="dimg" src="data:image/png;base64,${r.annotated}" style="max-width:100%;display:block">
+        <canvas id="bboxCanvas" onclick="onCanvasClick(event)"></canvas>
+      </div>
+      <div class="legend">
+        <div style="display:flex;align-items:center;gap:4px"><div class="ldot" style="background:#E53935"></div>Error</div>
+        <div style="display:flex;align-items:center;gap:4px"><div class="ldot" style="background:#F57C00"></div>Warning</div>
+        <span style="margin-left:auto;font-size:10px">Click marker → jump to issue · Click issue → show on drawing</span>
+      </div>
+    </div>`;
+  }
+
+  // Issues grouped by check type
+  html+=buildIssueList(r.issues||[]);
+
+  // BBS table
+  if(r.bbs_rows&&r.bbs_rows.length){
+    html+=buildBbsTable(r.bbs_rows);
+  }
+
+  document.getElementById('resPlaceholder').style.display='none';
+  const cont=document.getElementById('resContent');
+  cont.style.display='block';cont.innerHTML=html;
+
+  // Switch to results tab
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('t-results').classList.add('active');
+  document.getElementById('resTab').classList.add('active');
+
+  const rb=document.getElementById('resBadge');
+  rb.textContent=s.critical>0?`${s.critical} ERR`:grade;
+  rb.className='badge'+(grade==='FAIL'?' e':grade==='REVIEW'?' w':'');
+  rb.style.display='inline-block';
+
+  // Init canvas and card click handlers
+  setTimeout(()=>{
+    if(r.annotated)initCanvas();
+    numberCards();
+  },300);
+}
+
+// ── ISSUE LIST
+function buildIssueList(issues){
+  if(!issues.length) return '<div class="alert aok">✓ No issues found</div>';
+  const GROUPS={
+    'bbs_qty':'BBS Quantity vs Drawing','bbs_length':'BBS Length Check',
+    'bbs_shape':'BBS Shape Code','bbs_transport':'Transport Length >12000mm',
+    'bbs_rounding':'BBS Dimension Rounding','member_mark':'Member Mark Consistency',
+    'cover_missing':'Cover / Concrete Dimensions','label_multiplier':'Label Multiplier Notation',
+    'opening_rebar':'Rebar at Openings','rebar_boundary':'Rebar Beyond Concrete',
+    'plan_vs_shop':'Reference Plan vs Shop Drawing','calc_error':'Calculation Errors',
+    'other':'Other'
+  };
+  const grouped={};
+  issues.forEach(it=>{
+    const g=it.check||'other';
+    const key=Object.keys(GROUPS).find(k=>g.includes(k))||'other';
+    (grouped[key]=grouped[key]||[]).push(it);
+  });
+  let html='<div style="font-weight:700;font-size:15px;margin:4px 0 10px">Issues Found</div>';
+  Object.entries(grouped).forEach(([key,items])=>{
+    const label=GROUPS[key]||key;
+    const errs=items.filter(x=>x.severity==='error').length;
+    const warns=items.filter(x=>x.severity==='warning').length;
+    const gid='g_'+key;
+    const autoOpen=errs>0||warns>0;
+    html+=`
+    <div style="margin-bottom:4px">
+      <div class="isec-hdr${autoOpen?' open':''}" onclick="togSec('${gid}',this)">
+        <span>${label}</span>
+        <span class="isec-cnt ${errs>0?'cnt-e':warns>0?'cnt-w':'cnt-ok'}">
+          ${errs>0?errs+' error':''}${warns>0?(errs?' + ':'')+warns+' warn':''}${!errs&&!warns?'✓ OK':''}
+        </span>
+      </div>
+      <div id="${gid}" style="display:${autoOpen?'block':'none'}">
+        ${items.map(it=>issueCard(it)).join('')}
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+function issueCard(it){
+  const sev=(it.severity||'warning').toLowerCase();
+  const fix=it.fix?`<div class="fix-line">→ Fix: ${it.fix}</div>`:'';
+  const desc=it.description?`<div style="color:var(--muted);font-size:10px">${it.description}</div>`:'';
+  const loc=(it.element_id||it.member||'')?`<div class="loc-line">${it.element_type||''} ${it.element_id||it.member||''}</div>`:'';
+  return `<div class="icard ${sev}">
+    <span class="sevtag ${sev}">${sev.toUpperCase()}</span>
+    ${it.issue||'Issue'}
+    ${desc}${fix}${loc}
+  </div>`;
+}
+
+function togSec(id,hdr){
+  const el=document.getElementById(id);
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  hdr.classList.toggle('open',!open);
+}
+
+// ── BBS TABLE
+function buildBbsTable(rows){
+  const headers=['Mark','Member','Dia','Shape','Qty','Total(mm)','A','B','C','D','E','F'];
+  let html=`<div style="font-weight:700;font-size:15px;margin:12px 0 8px">BBS Data (${rows.length} rows)</div>
+  <div class="bbs-wrap"><table class="bbt"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const legs='ABCDEF'.split('').map(l=>{
+      const v=r.legs&&r.legs[l]!=null?r.legs[l]:'—';
+      return `<td>${v}</td>`;
+    }).join('');
+    const ok=(r.total_len||0)<=12000;
+    html+=`<tr><td><strong>${r.bar_mark||'—'}</strong></td><td>${r.member||'—'}</td>
+      <td>${r.dia||'—'}</td><td>${r.shape_code||'—'}</td><td>${r.qty||'—'}</td>
+      <td class="${ok?'tok':'tfail'}">${r.total_len||'—'}</td>${legs}</tr>`;
+  });
+  html+='</tbody></table></div>';
+  return html;
+}
+
+// ── CANVAS OVERLAY
+function initCanvas(){
+  const img=document.getElementById('dimg');
+  const cv=document.getElementById('bboxCanvas');
+  if(!img||!cv)return;
+  if(img.complete)drawOverlay();
+  else img.addEventListener('load',drawOverlay,{once:true});
+  window.addEventListener('resize',drawOverlay);
+}
+
+function drawOverlay(){
+  const img=document.getElementById('dimg');
+  const cv=document.getElementById('bboxCanvas');
+  if(!img||!cv)return;
+  const pw=img.offsetWidth,ph=img.offsetHeight;
+  if(!pw||!ph)return;
+  cv.width=pw;cv.height=ph;
+  cv.style.width=pw+'px';cv.style.height=ph+'px';
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,pw,ph);
+  if(!overlayOn)return;
+  const COLS={error:'rgba(229,57,53,',warning:'rgba(245,124,0,'};
+  const placed=[];
+  bboxData.forEach((it,i)=>{
+    const bb=it.bbox;if(!bb)return;
+    const bx=bb.x*pw,by=bb.y*ph,bw=(bb.w||.08)*pw,bh=(bb.h||.05)*ph;
+    const col=COLS[it.severity]||COLS.warning;
+    ctx.fillStyle=col+'0.10)';ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle=col+'0.85)';ctx.lineWidth=2;ctx.strokeRect(bx,by,bw,bh);
+    const ecx=bx+bw/2,ecy=by+bh/2;
+    ctx.beginPath();ctx.arc(ecx,ecy,4,0,Math.PI*2);ctx.fillStyle=col+'1)';ctx.fill();
+    const cr=12;let cx2=ecx,cy2=Math.max(cr+4,by-cr-8);
+    for(const[px,py]of placed){if(Math.abs(cx2-px)<2*cr+8&&Math.abs(cy2-py)<2*cr+8){cx2+=2*cr+10;if(cx2+cr>pw-4){cx2=Math.max(cr+4,bx);cy2+=2*cr+10;}}}
+    placed.push([cx2,cy2]);
+    ctx.beginPath();ctx.moveTo(cx2,cy2+cr);ctx.lineTo(ecx,ecy);ctx.strokeStyle=col+'0.7)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.beginPath();ctx.arc(cx2,cy2,cr,0,Math.PI*2);ctx.fillStyle=col+'1)';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 10px Barlow,sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),cx2,cy2);
+  });
+}
+
+function togOverlay(){
+  overlayOn=!overlayOn;
+  const b=document.getElementById('ovBtn');if(b)b.classList.toggle('av',overlayOn);
+  drawOverlay();
+}
+
+function onCanvasClick(e){
+  if(!bboxData.length)return;
+  const mx=e.offsetX/e.target.width,my=e.offsetY/e.target.height;
+  let best=-1,minD=Infinity;
+  bboxData.forEach((it,i)=>{
+    const bb=it.bbox;if(!bb)return;
+    const d=Math.hypot(mx-(bb.x+(bb.w||.08)/2),my-(bb.y+(bb.h||.05)/2));
+    if(d<.12&&d<minD){minD=d;best=i;}
+  });
+  if(best>=0)flashCard(best);
+}
+
+function numberCards(){
+  let n=0;
+  document.querySelectorAll('.icard:not(.ok-card)').forEach(c=>{
+    const idx=n;
+    const b=document.createElement('span');
+    b.textContent='#'+(n+1);b.className='num-badge';
+    c.insertBefore(b,c.firstChild);
+    c.addEventListener('click',e=>{if(!e.target.closest('a,button'))flashBbox(idx);});
+    n++;
+  });
+}
+
+function flashCard(idx){
+  const cards=document.querySelectorAll('.icard:not(.ok-card)');
+  if(cards[idx]){
+    cards[idx].scrollIntoView({behavior:'smooth',block:'center'});
+    cards[idx].style.outline='2px solid var(--accent)';
+    setTimeout(()=>{if(cards[idx])cards[idx].style.outline='';},2000);
+  }
+}
+
+function flashBbox(idx){
+  const cv=document.getElementById('bboxCanvas');
+  const img=document.getElementById('dimg');
+  document.querySelector('.dview')?.scrollIntoView({behavior:'smooth'});
+  if(!cv||!img||!bboxData[idx])return;
+  const pw=img.offsetWidth,ph=img.offsetHeight;
+  const bb=bboxData[idx].bbox;if(!bb)return;
+  const bx=bb.x*pw,by=bb.y*ph,bw=(bb.w||.08)*pw,bh=(bb.h||.05)*ph;
+  let t=0;
+  const iv=setInterval(()=>{
+    drawOverlay();
+    const ctx=cv.getContext('2d');
+    const a=Math.abs(Math.sin(t*.35));
+    ctx.strokeStyle=`rgba(245,166,35,${a})`;ctx.lineWidth=4+a*3;
+    ctx.strokeRect(bx-4,by-4,bw+8,bh+8);
+    t++;if(t>25)clearInterval(iv);
+  },80);
+}
+
+async function reLocalize(){
+  if(!_jobId)return;
+  const btn=document.getElementById('locBtn');
+  btn.disabled=true;btn.textContent='⏳ Locating...';
+  try{
+    const r=await fetch(`/audit/localize/${_jobId}`,{method:'POST'});
+    const d=await r.json();
+    if(d.annotated_image){
+      const img=document.getElementById('dimg');
+      if(img)img.src='data:image/png;base64,'+d.annotated_image;
+    }
+    (d.locs||[]).forEach(loc=>{if(bboxData[loc.idx]&&loc.bbox)bboxData[loc.idx].bbox=loc.bbox;});
+    drawOverlay();
+    btn.textContent=`✅ ${(d.locs||[]).length} re-located`;
+  }catch(e){btn.textContent='❌ Failed';}
+  finally{btn.disabled=false;}
+}
+
+function dlImg(){
+  const img=document.getElementById('dimg');if(!img)return;
+  const a=document.createElement('a');a.href=img.src;a.download='annotated_drawing.png';a.click();
+}
+
+// ── INIT
+checkStatus();
+setInterval(checkStatus,20000);
+buildCrankUI();
+</script>
+</body>
+</html>
